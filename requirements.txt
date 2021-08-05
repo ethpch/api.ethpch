@@ -1,0 +1,12 @@
+pyyaml
+markdown
+loguru
+uvicorn[standard]
+fastapi
+orjson
+aiobotocore
+sqlalchemy>=1.4
+alembic>=1.5.6
+apscheduler
+imageio
+pixivpy-async>=1.2.13

@@ -1,0 +1,39 @@
+# section:
+#    file:        path to log file, not set leads to no sink
+#    filter:      filter by logger name, left blank to set same as section
+#    level:       log level, no sink leads to no use
+#    format:      log format, no sink leads to no use
+#    encoding:    log file encoding, no sink leads to no use
+#    rotation:    log file rotation rule, no sink leads to no use
+#    enqueue:     multiprocessing support, no sink leads to no use
+#    compression: file format for rotation, no sink leads to no use
+#    acceptsub:   whether to accept passed messages from sub loggers
+#    propagate:   whether to pass messages to ancestor
+
+full:
+  filter: 
+  level: INFO
+  file: full/full.log
+  rotations: 00:00
+
+api_ethpch:
+  file: api_ethpch/api_ethpch.log
+  rotations: 10 MB
+
+uvicorn:
+  file: uvicorn/uvicorn.log
+  rotations: 00:00
+
+uvicorn.access:
+  file: uvicorn_access/access.log
+  rotations: 00:00
+
+uvicorn.error:
+  propagate: true
+
+apscheduler:
+  file: schedule/schedule.log
+  rotations: 10 MB
+
+apscheduler.*:
+  propagate: true

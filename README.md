@@ -1,3 +1,9 @@
 # api.ethpch
 
-ethpch自用网站后端，使用FastAPI搭建
+Self-use backend for ethpch, based on [FastAPI](https://github.com/tiangolo/fastapi)
+
+[Docs](https://api.ethpch.moe/docs)
+
+[Github repository](https://github.com/ethpch/api.ethpch)
+
+[TODO](https://api.ethpch.moe/todo)

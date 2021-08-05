@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# vscode
+.vscode/
+.VSCodeCounter/
+
+# config file
+config.yaml
+
+# migrations
+utils/database/migrations/
