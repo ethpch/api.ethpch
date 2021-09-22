@@ -70,6 +70,11 @@ class ChangeReload(ChangeReload):
         self._scheduler = scheduler
         self._scheduler.start()
 
+    def restart(self):
+        log.remove_sinks('stdout')
+        super().restart()
+        log.add_stdout()
+
     def signal_handler(self, sig, frame):
         if self._scheduler.running:
             self._scheduler.shutdown()

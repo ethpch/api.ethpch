@@ -40,4 +40,8 @@ async def hello():
 
 @APP.get('/todo')
 async def todo():
-    return responses.HTMLResponse(markdown(TODO.read_text(encoding='utf-8')))
+    try:
+        todo = TODO.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        todo = 'Nothing new in plan.'
+    return responses.HTMLResponse(markdown(todo))
