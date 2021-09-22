@@ -1,7 +1,6 @@
 from typing import List, Literal, Union, Optional
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from utils.schedule.apscheduler import scheduler
 from .pixiv import Pixiv
 from . import models
 
@@ -499,15 +498,3 @@ async def random_illust(min_view: int = 10000,
             limit=limit,
         )
     return choices
-
-
-@scheduler.scheduled_job('cron', hour=1, jitter=3600)
-async def auto_ranking():
-    async with Pixiv() as p:
-        await p.illust_ranking('day')
-
-
-@scheduler.scheduled_job('cron', hour='*/6', jitter=600)
-async def auto_trend_tags():
-    async with Pixiv() as p:
-        await p.trending_tags_illust()

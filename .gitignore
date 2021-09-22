@@ -137,3 +137,6 @@ config.yaml
 
 # migrations
 utils/database/migrations/
+
+# TODO
+TODO.md

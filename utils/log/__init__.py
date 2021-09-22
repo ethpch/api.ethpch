@@ -104,19 +104,35 @@ def init_logging():
             logger.setLevel(LOGGER_CONFIG[intercept]['level'])
             logger.handlers = [intercept_handler]
             logger.propagate = False
+
+
+def add_stdout():
     # add sys.stdout
-    get_logger().add(sink=sys.stdout, format=DEFAULT_FORMAT)
+    _sinks_mapping['stdout'] = get_logger().add(
+        sink=sys.stdout,
+        format=DEFAULT_FORMAT,
+    )
+
+
+def remove_sinks(*keys: str):
+    for _k in keys:
+        handler_id = _sinks_mapping.get(_k)
+        if handler_id:
+            get_logger().remove(handler_id)
+            _sinks_mapping.pop(_k)
 
 
 def setup_main_logger():
     from loguru import logger
     set_global_logger(logger)
     logger.remove()  # disable sys.stderr
-    for _config in LOGGER_CONFIG.values():
-        logger.add(**_config, diagnose=debug)
+    for key, _config in LOGGER_CONFIG.items():
+        _sinks_mapping[key] = logger.add(**_config, diagnose=debug)
 
 
 _logger = None
+
+_sinks_mapping = {}
 
 
 def set_global_logger(logger):
@@ -128,5 +144,5 @@ def get_logger():
     return _logger
 
 
-__all__ = ('InterceptHandler', 'init_logging', 'setup_main_logger',
-           'set_global_logger', 'get_logger')
+__all__ = ('InterceptHandler', 'init_logging', 'add_stdout', 'remove_sink',
+           'setup_main_logger', 'set_global_logger', 'get_logger')
