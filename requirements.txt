@@ -1,5 +1,4 @@
 pyyaml
-markdown
 loguru
 uvicorn[standard]
 fastapi

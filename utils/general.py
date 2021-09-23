@@ -1,8 +1,9 @@
-from typing import Optional, Dict
+from typing import Literal, Optional, Dict
 from types import ModuleType
 from pathlib import Path
 from importlib import import_module
 from constants import APP_DIR
+from utils.config import markdown_theme
 
 
 def importer(target: str,
@@ -25,3 +26,15 @@ def importer(target: str,
             importpath = scope.name + '.' + ('.'.join(relpath.parts))[:-3]
             imported[importpath] = import_module(importpath)
     return imported
+
+
+def markdown_html(
+    md_text: str,
+    theme: Literal['amelia', 'cerulean', 'cyborg', 'journal', 'readable',
+                   'simplex', 'slate', 'spacelab', 'spruce', 'superhero',
+                   'united'] = markdown_theme,
+) -> str:
+    # markdown html use strapdown.js
+    # see https://github.com/arturadib/strapdown
+    return f'<xmp theme="{theme}" style="display:none;">{md_text}</xmp>' + \
+            '<script src="http://strapdownjs.com/v/0.2/strapdown.js"></script>'

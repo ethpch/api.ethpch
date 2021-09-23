@@ -1,10 +1,10 @@
 from importlib import import_module
 from fastapi import FastAPI
 from fastapi import responses
-from markdown import markdown
 from utils.config import debug
 from utils.database.session import Session
 from utils.schedule import ConcurrencyScheduler
+from utils.general import markdown_html
 from constants import README, TODO
 
 response_class_choices = {
@@ -35,7 +35,8 @@ APP = FastAPI(
 
 @APP.get('/')
 async def hello():
-    return responses.HTMLResponse(markdown(README.read_text(encoding='utf-8')))
+    return responses.HTMLResponse(
+        markdown_html(README.read_text(encoding='utf-8')))
 
 
 @APP.get('/todo')
@@ -44,4 +45,4 @@ async def todo():
         todo = TODO.read_text(encoding='utf-8')
     except FileNotFoundError:
         todo = 'Nothing new in plan.'
-    return responses.HTMLResponse(markdown(todo))
+    return responses.HTMLResponse(markdown_html(todo))

@@ -125,6 +125,12 @@ CONFIG_TEMPLATE = """server:
     ssl_ciphers:
 
 # core config
+# markdown theme, options:
+# amelia, cerulean, cyborg, journal, readable, simplex,
+# slate, spacelab, spruce, superhero, united
+# defaults to united
+markdown theme:
+
 s3:
   endpoint_url:
   aws_access_key_id:
@@ -187,6 +193,7 @@ else:
     else:
         debug = False
     server = serverModel(**RAW_CONFIG['server'])
+    markdown_theme = RAW_CONFIG.get('markdown theme', 'united')
     s3 = s3Model(**RAW_CONFIG['s3'])
     database = databaseModel(**RAW_CONFIG['database'])
     apps = RAW_CONFIG['enable_apps']
