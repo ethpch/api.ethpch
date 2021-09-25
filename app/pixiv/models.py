@@ -99,13 +99,14 @@ class Illust(BaseModel):
     class File(BaseModel):
         page: int
         source: Optional[str] = Field(None, max_length=500)
-        pcat: Optional[str] = None
+        pcat: Optional[str] = Field(None, max_length=500)
         url: Optional[str] = Field(None, max_length=500)
 
         @classmethod
         def modify_single_instance(cls, obj):
             obj.pcat = obj.pcat_reverse
 
+    preview: Union[File, List[File], None] = None
     files: Union[File, List[File], None] = None
 
     @classmethod

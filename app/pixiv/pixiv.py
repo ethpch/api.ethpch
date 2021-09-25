@@ -11,6 +11,7 @@ from sqlalchemy.sql.functions import func
 from sqlalchemy.orm.relationships import RelationshipProperty
 from utils.config import pixiv, debug
 from utils.database.session import Session
+from utils.database.crud import select
 from utils.schedule import ConcurrencyScheduler
 from utils.storage import s3
 from . import tables
@@ -151,7 +152,7 @@ class Pixiv(object):
     async def transfer_storage(self, storage_id: int):
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.PixivStorage,
                     whereclauses=[tables.PixivStorage.id == storage_id])
                 result = await session.execute(stmt)
@@ -243,11 +244,10 @@ class Pixiv(object):
     ) -> Optional[tables.User]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
-                    tables.User,
-                    eagerloads=['background_image'],
-                    whereclauses=[tables.User.id == user_id],
-                    limit=1)
+                stmt = select(tables.User,
+                              eagerloads=['background_image'],
+                              whereclauses=[tables.User.id == user_id],
+                              limit=1)
                 result = await session.execute(stmt)
                 user = result.scalar()
                 if user.profile and user.profile.useable is False:
@@ -300,15 +300,14 @@ class Pixiv(object):
     ) -> List[tables.Illust]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
-                    tables.Illust,
-                    whereclauses=[
-                        tables.Illust.user_id == user_id,
-                        tables.Illust.type == type
-                    ],
-                    order_by=tables.Illust.create_date.desc(),
-                    limit=Pixiv.RESULT_LIMIT,
-                    offset=offset)
+                stmt = select(tables.Illust,
+                              whereclauses=[
+                                  tables.Illust.user_id == user_id,
+                                  tables.Illust.type == type
+                              ],
+                              order_by=tables.Illust.create_date.desc(),
+                              limit=Pixiv.RESULT_LIMIT,
+                              offset=offset)
                 result = await session.execute(stmt)
                 illusts = result.scalars().unique().all()
                 self.downloads.extend([
@@ -363,7 +362,7 @@ class Pixiv(object):
     ) -> List[tables.Illust]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Illust,
                     eagerloads=['bookmarked_by'],
                     joins=[tables.Illust.bookmarked_by],
@@ -473,7 +472,7 @@ class Pixiv(object):
     ) -> List[tables.Illust]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Illust,
                     joins=[tables.Illust.user],
                     whereclauses=[
@@ -532,7 +531,7 @@ class Pixiv(object):
     ) -> Optional[tables.Illust]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Illust,
                     eagerloads=['square_medium', 'medium', 'large'],
                     eagerload_strategy='selectinload',
@@ -591,7 +590,7 @@ class Pixiv(object):
     ) -> List[tables.IllustComment]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.IllustComment,
                     eagerloads=['user'],
                     whereclauses=[tables.IllustComment.illust_id == illust_id],
@@ -730,7 +729,7 @@ class Pixiv(object):
             date = datetime.strptime(date, '%Y-%m-%d').date()
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Illust,
                     joins=[tables._AssociationIllustRank, tables.IllustRank],
                     whereclauses=[
@@ -867,7 +866,7 @@ class Pixiv(object):
                         _not = True
                     if search_target == 'partial_match_for_tags':
                         clause = tables.Illust.id.in_(
-                            Session.select_constructor(
+                            select(
                                 tables.Illust.id,
                                 joins=[tables.Illust.tags],
                                 whereclauses=[
@@ -879,23 +878,21 @@ class Pixiv(object):
                                 ]))
                     elif search_target == 'exact_match_for_tags':
                         clause = tables.Illust.id.in_(
-                            Session.select_constructor(
-                                tables.Illust.id,
-                                joins=[tables.Illust.tags],
-                                whereclauses=[
-                                    (tables.Tag.name == kw,
-                                     tables.Tag.translated_name == kw)
-                                ]))
+                            select(tables.Illust.id,
+                                   joins=[tables.Illust.tags],
+                                   whereclauses=[
+                                       (tables.Tag.name == kw,
+                                        tables.Tag.translated_name == kw)
+                                   ]))
                     elif search_target == 'title_and_caption':
                         clause = tables.Illust.id.in_(
-                            Session.select_constructor(
-                                tables.Illust.id,
-                                whereclauses=[
-                                    (tables.Illust.title.like(f'%{kw}%'),
-                                     tables.Illust.caption.like(f'%{kw}%'))
-                                ]))
+                            select(tables.Illust.id,
+                                   whereclauses=[
+                                       (tables.Illust.title.like(f'%{kw}%'),
+                                        tables.Illust.caption.like(f'%{kw}%'))
+                                   ]))
                     whereclauses.append(~clause if _not else clause)
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Illust,
                     whereclauses=whereclauses,
                     order_by=getattr(tables.Illust.create_date, sort[5:])(),
@@ -1027,7 +1024,7 @@ class Pixiv(object):
     ) -> List[tables.User]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.User,
                     eagerloads=['illusts', 'novels'],
                     whereclauses=[
@@ -1090,7 +1087,7 @@ class Pixiv(object):
     ) -> List[tables.User]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.User,
                     eagerloads=['illusts', 'novels'],
                     whereclauses=[
@@ -1135,7 +1132,7 @@ class Pixiv(object):
                         for _ in (item.illusts + item.novels) for tag in _.tags
                     })
                 await self._users_into_db(all_users, 'illusts', 'novels')
-                mu_stmt = Session.select_constructor(
+                mu_stmt = select(
                     tables.User,
                     eagerloads=['_mypixiv', 'mypixiv'],
                     whereclauses=[tables.User.id == user_id],
@@ -1166,7 +1163,7 @@ class Pixiv(object):
     ) -> List[tables.User]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.User,
                     eagerloads=['illusts', 'novels'],
                     whereclauses=[
@@ -1202,7 +1199,7 @@ class Pixiv(object):
     ) -> List[tables.User]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.User,
                     eagerloads=['illusts', 'novels'],
                     whereclauses=[
@@ -1285,12 +1282,12 @@ class Pixiv(object):
                 whereclauses = []
                 for kw in word.strip().split(' '):
                     clause = tables.User.id.in_(
-                        Session.select_constructor(
+                        select(
                             tables.User.id,
                             whereclauses=[tables.User.name.like(f'%{kw}%')],
                         ))
                     whereclauses.append(clause)
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.User,
                     eagerloads=['illusts', 'novels'],
                     whereclauses=whereclauses,
@@ -1376,7 +1373,7 @@ class Pixiv(object):
                         _not = True
                     if search_target == 'partial_match_for_tags':
                         clause = tables.Novel.id.in_(
-                            Session.select_constructor(
+                            select(
                                 tables.Novel.id,
                                 joins=[tables.Novel.tags],
                                 whereclauses=[
@@ -1388,30 +1385,27 @@ class Pixiv(object):
                                 ]))
                     elif search_target == 'exact_match_for_tags':
                         clause = tables.Novel.id.in_(
-                            Session.select_constructor(
-                                tables.Novel.id,
-                                joins=[tables.Novel.tags],
-                                whereclauses=[
-                                    (tables.Tag.name == kw,
-                                     tables.Tag.translated_name == kw)
-                                ]))
+                            select(tables.Novel.id,
+                                   joins=[tables.Novel.tags],
+                                   whereclauses=[
+                                       (tables.Tag.name == kw,
+                                        tables.Tag.translated_name == kw)
+                                   ]))
                     elif search_target == 'text':
                         clause = tables.Novel.id.in_(
-                            Session.select_constructor(
-                                tables.Novel.id,
-                                whereclauses=[
-                                    tables.Novel.content.like(f'%{kw}%')
-                                ]))
+                            select(tables.Novel.id,
+                                   whereclauses=[
+                                       tables.Novel.content.like(f'%{kw}%')
+                                   ]))
                     elif search_target == 'Keyword':
                         clause = tables.Novel.id.in_(
-                            Session.select_constructor(
-                                tables.Novel.id,
-                                whereclauses=[
-                                    tables.Illust.title.like(f'%{kw}%'),
-                                    tables.Novel.caption.like(f'%{kw}%')
-                                ]))
+                            select(tables.Novel.id,
+                                   whereclauses=[
+                                       tables.Illust.title.like(f'%{kw}%'),
+                                       tables.Novel.caption.like(f'%{kw}%')
+                                   ]))
                     whereclauses.append(~clause if _not else clause)
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Novel,
                     whereclauses=whereclauses,
                     order_by=getattr(tables.Novel.create_date, sort[5:])(),
@@ -1466,12 +1460,11 @@ class Pixiv(object):
     ) -> List[tables.Novel]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
-                    tables.Novel,
-                    whereclauses=[tables.Novel.user_id == user_id],
-                    order_by=tables.Novel.create_date.desc(),
-                    limit=Pixiv.RESULT_LIMIT,
-                    offset=offset)
+                stmt = select(tables.Novel,
+                              whereclauses=[tables.Novel.user_id == user_id],
+                              order_by=tables.Novel.create_date.desc(),
+                              limit=Pixiv.RESULT_LIMIT,
+                              offset=offset)
                 result = await session.execute(stmt)
                 novels = result.scalars().unique().all()
                 self.downloads.extend([
@@ -1509,7 +1502,7 @@ class Pixiv(object):
     async def novel_series_local(self, series_id: int) -> List[tables.Novel]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Novel,
                     whereclauses=[tables.Novel.series_id == series_id],
                     order_by=tables.Novel.create_date.desc(),
@@ -1554,7 +1547,7 @@ class Pixiv(object):
     ) -> Optional[tables.Novel]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Novel,
                     eagerloads=['square_medium', 'medium', 'large'],
                     whereclauses=[tables.Novel.id == novel_id],
@@ -1577,7 +1570,7 @@ class Pixiv(object):
     async def novel_text_local(self, novel_id: int) -> Dict[str, Any]:
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
+                stmt = select(
                     tables.Novel.content,
                     tables.Novel.series_id,
                     whereclauses=[tables.Novel.id == novel_id],
@@ -1588,7 +1581,7 @@ class Pixiv(object):
                 if content:
                     d = {'id': novel_id, 'text': content, 'next': None}
                     if series_id:
-                        _stmt = Session.select_constructor(
+                        _stmt = select(
                             tables.Novel.id,
                             whereclauses=[tables.Novel.series_id == series_id],
                             order_by=tables.Novel.create_date.asc(),
@@ -1696,10 +1689,9 @@ class Pixiv(object):
     async def showcase_article_local(self, showcase_id: int):
         async with Session() as session:
             async with session.begin():
-                stmt = Session.select_constructor(
-                    tables.Showcase,
-                    whereclauses=[tables.Showcase.id == showcase_id],
-                    limit=1)
+                stmt = select(tables.Showcase,
+                              whereclauses=[tables.Showcase.id == showcase_id],
+                              limit=1)
                 result = await session.execute(stmt)
                 showcase = result.scalar()
                 if showcase.thumbnail and showcase.thumbnail.useable is False:
@@ -1747,7 +1739,7 @@ class Pixiv(object):
                         whereclauses.extend((~clause_0, ~clause_1))
                     else:
                         whereclauses.append((clause_0, clause_1))
-                count_stmt = Session.select_constructor(
+                count_stmt = select(
                     func.count(),
                     select_from=tables.Illust,
                     whereclauses=whereclauses,
@@ -1787,7 +1779,7 @@ class Pixiv(object):
                         return choices(illusts, k=limit) \
                             if len(illusts) >= limit else illusts
                 else:
-                    stmt = Session.select_constructor(
+                    stmt = select(
                         tables.Illust,
                         joins=[tables.Illust.tags],
                         whereclauses=whereclauses,
@@ -1919,7 +1911,7 @@ class Pixiv(object):
             attr for attr in construct_params.keys() if isinstance(
                 getattr(tables.User, attr).property, RelationshipProperty)
         ]
-        mu_stmt = Session.select_constructor(
+        mu_stmt = select(
             tables.User,
             eagerloads=eagerloads,
             eagerload_strategy=eagerload_strategy,
@@ -1941,7 +1933,7 @@ class Pixiv(object):
         **construct_params,
     ):
         user_ids = list(all_users.keys())
-        u_stmt = Session.select_constructor(
+        u_stmt = select(
             tables.User,
             eagerloads=[*eagerloads] + [
                 attr for attr in construct_params.keys() if isinstance(
@@ -2114,7 +2106,7 @@ class Pixiv(object):
             attr for attr in construct_params.keys() if isinstance(
                 getattr(tables.Illust, attr).property, RelationshipProperty)
         ]
-        mi_stmt = Session.select_constructor(
+        mi_stmt = select(
             tables.Illust,
             eagerloads=eagerloads,
             eagerload_strategy=eagerload_strategy,
@@ -2145,7 +2137,7 @@ class Pixiv(object):
         **construct_params,
     ):
         illust_ids = list(all_illusts.keys())
-        i_stmt = Session.select_constructor(
+        i_stmt = select(
             tables.Illust,
             eagerloads=[*eagerloads] + [
                 attr for attr in construct_params.keys() if isinstance(
@@ -2185,7 +2177,7 @@ class Pixiv(object):
                 date = (now - timedelta(days=1)).date()
         elif isinstance(date, str):
             date = datetime.strptime(date, '%Y-%m-%d').date()
-        r_asso_stmt = Session.select_constructor(
+        r_asso_stmt = select(
             tables._AssociationIllustRank,
             joins=[tables.IllustRank],
             whereclauses=[
@@ -2290,7 +2282,7 @@ class Pixiv(object):
             attr for attr in construct_params.keys() if isinstance(
                 getattr(tables.Novel, attr).property, RelationshipProperty)
         ]
-        mn_stmt = Session.select_constructor(
+        mn_stmt = select(
             tables.Novel,
             eagerloads=eagerloads,
             eagerload_strategy=eagerload_strategy,
@@ -2319,7 +2311,7 @@ class Pixiv(object):
         **construct_params,
     ):
         novel_ids = list(all_novels.keys())
-        n_stmt = Session.select_constructor(
+        n_stmt = select(
             tables.Novel,
             eagerloads=[*eagerloads] + [
                 attr for attr in construct_params.keys() if isinstance(
@@ -2347,7 +2339,7 @@ class Pixiv(object):
     async def _tags_into_db(self, all_tags: Dict[str, Dict[str, str]]):
         self.tags.clear()
         tag_names = list(all_tags.keys())
-        t_stmt = Session.select_constructor(
+        t_stmt = select(
             tables.Tag,
             whereclauses=[tables.Tag.name.in_(tag_names)],
         )
@@ -2390,7 +2382,7 @@ class Pixiv(object):
             if v.parent_comment:
                 comment_ids_extra.append(v.parent_comment.id)
         comment_ids_all = set(comment_ids + comment_ids_extra)
-        c_stmt = Session.select_constructor(
+        c_stmt = select(
             tables.IllustComment,
             eagerloads=[*eagerloads],
             eagerload_strategy=eagerload_strategy,
@@ -2448,7 +2440,7 @@ class Pixiv(object):
         **construct_params,
     ) -> tables.Showcase:
         construct_params.pop('id', None)
-        msc_stmt = Session.select_constructor(
+        msc_stmt = select(
             tables.Showcase,
             whereclauses=[tables.Showcase.id == showcase_id],
             limit=1,
@@ -2475,7 +2467,7 @@ class Pixiv(object):
         all_showcases: Dict[int, Dict[str, Any]],
     ):
         showcase_ids = all_showcases.keys()
-        sc_stmt = Session.select_constructor(
+        sc_stmt = select(
             tables.Showcase,
             whereclauses=[tables.Showcase.id.in_(showcase_ids)],
         )

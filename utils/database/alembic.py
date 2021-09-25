@@ -1,9 +1,9 @@
-import os
+from logging import getLogger
 from hashlib import md5
 from importlib import import_module
 from typing import List
-from alembic.config import main
 from constants import APP_DIR, ALEMBIC_MIGRATION_PATH
+from utils.scripts import run_subprocess
 from .session import DB_SETTING
 
 if DB_SETTING['type'] == 'sqlite':
@@ -14,9 +14,11 @@ else:
         [DB_SETTING['type'], DB_SETTING['host'],
          DB_SETTING['schema']]).encode()).hexdigest()
 
+logger = getLogger('api_ethpch')
+
 
 def call_alembic(args: List[str]):
-    print(f'Connect hash is "{_hash}".')
+    logger.info(f'Connect hash is "{_hash}".')
     for p in APP_DIR.rglob('tables.py'):
         _skip = False
         for part in p.parts:
@@ -28,7 +30,6 @@ def call_alembic(args: List[str]):
             importpath = APP_DIR.name + '.' + ('.'.join(relpath.parts))[:-3]
             import_module(importpath)
     ALEMBIC_MIGRATION_PATH.mkdir(exist_ok=True)
-    os.chdir(ALEMBIC_MIGRATION_PATH)
     args = list(args)
     remove_args = ('-c', '--config')
     for arg in remove_args:
@@ -49,7 +50,7 @@ def call_alembic(args: List[str]):
             break
         except ValueError:
             pass
-    main(argv=args, prog='api.ethpch alembic')
+    run_subprocess(['alembic', *args], cwd=ALEMBIC_MIGRATION_PATH)
 
 
 def alembic_init():

@@ -4,7 +4,9 @@ import logging
 from uvicorn.server import Server
 from uvicorn.config import Config
 from uvicorn.supervisors import ChangeReload, Multiprocess
+from constants import ASGI
 from utils import log
+from utils.config import server as _server, debug as _debug
 from utils.asyncio import auto_event_loop_policy
 
 
@@ -119,9 +121,18 @@ class Multiprocess(Multiprocess):
         super().signal_handler(sig, frame)
 
 
-def run(app, **kwargs):
+def run():
     log.setup_main_logger()
-    kwargs['logger'] = log.get_logger()
+    app = ':'.join(ASGI)
+    kwargs = dict(
+        host=_server.host,
+        port=_server.port,
+        debug=_debug,
+        logger=log.get_logger(),
+        workers=os.cpu_count(),
+    )
+    if _server.ssl.enable is True:
+        kwargs.update(_server.ssl.dict(exclude='enable'))
     config = Config(app, **kwargs)
     server = Server(config=config)
 

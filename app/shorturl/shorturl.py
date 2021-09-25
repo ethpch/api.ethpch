@@ -1,5 +1,6 @@
 import string
 from utils.database.session import Session
+from utils.database.crud import select
 from .tables import Shorturl
 
 digit62 = string.digits + string.ascii_letters
@@ -8,7 +9,7 @@ digit62 = string.digits + string.ascii_letters
 async def src_to_dst(source: str) -> str:
     async with Session() as session:
         async with session.begin():
-            stmt = Session.select_constructor(
+            stmt = select(
                 Shorturl,
                 whereclauses=[Shorturl.source == source],
                 limit=1,
@@ -27,7 +28,7 @@ async def dst_to_src(short: str) -> str:
     async with Session() as session:
         async with session.begin():
             id = str62_to_int(short)
-            stmt = Session.select_constructor(
+            stmt = select(
                 Shorturl,
                 whereclauses=[Shorturl.id == id],
                 limit=1,

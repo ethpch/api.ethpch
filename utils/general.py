@@ -36,5 +36,6 @@ def markdown_html(
 ) -> str:
     # markdown html use strapdown.js
     # see https://github.com/arturadib/strapdown
-    return f'<xmp theme="{theme}" style="display:none;">{md_text}</xmp>' + \
-            '<script src="http://strapdownjs.com/v/0.2/strapdown.js"></script>'
+    return (
+        f'<xmp theme="{theme}" style="display:none;">{md_text}</xmp>'
+        '<script src="https://strapdownjs.com/v/0.2/strapdown.js"></script>')

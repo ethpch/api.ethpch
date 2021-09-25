@@ -267,7 +267,8 @@ class Illust(Base):
                            order_by=PixivStorage.page.asc())
     _large = relationship('PixivStorage',
                           primaryjoin=PixivStorage._illust_l_id == id,
-                          order_by=PixivStorage.page.asc())
+                          order_by=PixivStorage.page.asc(),
+                          lazy='joined')
     _original = relationship('PixivStorage',
                              primaryjoin=PixivStorage._illust_o_id == id,
                              order_by=PixivStorage.page.asc(),
@@ -333,12 +334,26 @@ class Illust(Base):
     def original(self, value):
         self._original = value
 
-    def image(self, *, page: int = None, random: bool = False) -> str:
+    @property
+    def preview(self) -> Union[PixivStorage, List[PixivStorage], None]:
         if self.type == 'ugoira':
-            if self.ugoira.useable is True:
-                return str(self.ugoira)
+            return self._original[0] if self._original else None
+        else:
+            return self._large
+
+    def image(self,
+              *,
+              page: int = None,
+              preview: bool = False,
+              random: bool = False) -> str:
+        if self.type == 'ugoira':
+            if preview is True:
+                return str(self.preview)
             else:
-                return str(self._original[0])
+                if self.ugoira.useable is True:
+                    return str(self.ugoira)
+                else:
+                    return str(self._original[0])
         else:
             if page is None:
                 if random is True:
@@ -346,7 +361,10 @@ class Illust(Base):
                 else:
                     page = 0
             if 0 <= page < self.page_count:
-                return str(self._original[page])
+                if preview is True:
+                    return str(self._large[page])
+                else:
+                    return str(self._original[page])
             else:
                 raise ValueError(
                     'page should be greater then -1 and '

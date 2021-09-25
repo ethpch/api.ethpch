@@ -5,7 +5,7 @@ from utils.config import debug
 from utils.database.session import Session
 from utils.schedule import ConcurrencyScheduler
 from utils.general import markdown_html
-from constants import README, TODO
+from constants import __version__, README, TODO
 
 response_class_choices = {
     'orjson': responses.ORJSONResponse,
@@ -24,7 +24,7 @@ for module, _class in response_class_choices.items():
 APP = FastAPI(
     title='API.Ethpch',
     description="Ethpch's personal API backend.",
-    version='0.2.0',
+    version=__version__,
     docs_url='/docs' if debug else None,
     redoc_url='/redoc' if debug else '/docs',
     on_startup=[Session.init, ConcurrencyScheduler.start_all],

@@ -5,7 +5,10 @@ from yaml import safe_load
 from pydantic import BaseModel, Field, AnyUrl, HttpUrl, constr, IPvAnyAddress
 from constants import CONFIG_FILE_PATH
 
-__all__ = ['debug', 'server', 's3', 'database', 'apps']
+__all__ = [
+    'debug', 'server', 'asgi_framework', 'markdown_theme', 's3', 'database',
+    'apps'
+]
 
 DomainUrl = constr(
     regex=r'((?=[a-z0-9-]{1,63}\.)(xn--)?[a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,63}'
@@ -125,6 +128,9 @@ CONFIG_TEMPLATE = """server:
     ssl_ciphers:
 
 # core config
+# ASGI Framework, options: uvicorn
+asgi framework: uvicorn
+
 # markdown theme, options:
 # amelia, cerulean, cyborg, journal, readable, simplex,
 # slate, spacelab, spruce, superhero, united
@@ -177,7 +183,7 @@ pixiv:
   # bypass option
   bypass:
   # transfer to storage
-  transfer:
+  transfer: false
 """
 
 try:
@@ -193,7 +199,8 @@ else:
     else:
         debug = False
     server = serverModel(**RAW_CONFIG['server'])
-    markdown_theme = RAW_CONFIG.get('markdown theme', 'united')
+    asgi_framework: str = RAW_CONFIG.get('asgi framework', 'uvicorn')
+    markdown_theme: str = RAW_CONFIG.get('markdown theme', 'united')
     s3 = s3Model(**RAW_CONFIG['s3'])
     database = databaseModel(**RAW_CONFIG['database'])
     apps = RAW_CONFIG['enable_apps']

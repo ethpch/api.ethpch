@@ -1,11 +1,8 @@
 import os
 from logging import getLogger
-from typing import Literal, Sequence, Set, Union
-from sqlalchemy import select, or_, orm, exc
-from sqlalchemy.sql.selectable import FromClause, Select
+from sqlalchemy import orm, exc
 from sqlalchemy.ext.asyncio import AsyncEngine, \
     create_async_engine, AsyncSession
-from sqlalchemy.sql.visitors import Visitable
 from constants import HOME_DIR
 from utils.config import database
 
@@ -174,51 +171,6 @@ class Session(object):
         except RuntimeError:
             Session.init()
             self.session = type(self).get_session()(*args, **kwargs)
-
-    @staticmethod
-    def select_constructor(
-        *table_or_column,
-        eagerloads: Union[Sequence[str], Set[str]] = [],
-        eagerload_strategy: Literal['joinedload', 'subqueryload',
-                                    'selectinload'] = None,
-        joins: Sequence[FromClause] = [],
-        whereclauses: Sequence[Union[str, bool, Visitable,
-                                     Sequence[Union[str, bool,
-                                                    Visitable]]]] = [],
-        select_from: FromClause = None,
-        order_by: Union[str, bool, Visitable, None] = None,
-        limit: Union[int, str, Visitable, None] = None,
-        offset: Union[int, str, Visitable, None] = None,
-    ) -> Select:
-        statement = select(table_or_column)
-        eagerloads = list(set(eagerloads))
-        if eagerloads:
-            eagerload_strategy = eagerload_strategy or 'joinedload'
-            eagerload_func = getattr(orm, eagerload_strategy)
-            for eagerload in eagerloads:
-                if '.' in eagerload:
-                    main = eagerload.split('.')
-                    eager = eagerload_func(main[0])
-                    for item in main[1:]:
-                        eager = getattr(eager, eagerload_strategy)(item)
-                    statement = statement.options(eagerload_func(eager))
-                else:
-                    statement = statement.options(eagerload_func(eagerload))
-        for join in joins:
-            statement = statement.join(join)
-        for i in range(len(whereclauses)):
-            if isinstance(whereclauses[i], (list, tuple)):
-                whereclauses[i] = or_(*whereclauses[i])
-        statement = statement.where(*whereclauses)
-        if select_from is not None:
-            statement = statement.select_from(select_from)
-        if order_by is not None:
-            statement = statement.order_by(order_by)
-        if limit is not None:
-            statement = statement.limit(limit)
-        if offset is not None:
-            statement = statement.offset(offset)
-        return statement
 
 
 __all__ = ('DB_SETTING', 'Session')

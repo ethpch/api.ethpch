@@ -146,30 +146,34 @@ async def user_list(offset: Optional[int] = None, local: bool = False):
 
 # illust
 @pixiv_router.get('/i/{illust_id}')
-async def illust_image(illust_id: int):
+async def illust_image(illust_id: int, preview: bool = True):
     async with Pixiv() as p:
         illust = await p.illust_detail_local(illust_id=illust_id)
         if illust is None:
             illust = await p.illust_detail(illust_id=illust_id)
     if illust is not None:
         return HTMLResponse(f'<title>{illust_id}</title>'
-                            f'<img src="{illust.image()}" '
+                            f'<img src="{illust.image(preview=preview)}" '
                             'style="max-height: 100%; max-width: 100%">')
     else:
         return HTMLResponse(f'Cannot find illust {illust_id}!')
 
 
 @pixiv_router.get('/i/{illust_id}/p{page}')
-async def illust_image_page(illust_id: int, page: int, req: Request):
+async def illust_image_page(illust_id: int,
+                            page: int,
+                            preview: bool = True,
+                            req: Request = ...):
     async with Pixiv() as p:
         illust = await p.illust_detail_local(illust_id=illust_id)
         if illust is None:
             illust = await p.illust_detail(illust_id=illust_id)
     if illust is not None:
         try:
-            return HTMLResponse(f'<title>{illust_id}-p{page}</title>'
-                                f'<img src="{illust.image(page)}" '
-                                'style="max-height: 100%; max-width: 100%">')
+            return HTMLResponse(
+                f'<title>{illust_id}-p{page}</title>'
+                f'<img src="{illust.image(page=page, preview=preview)}" '
+                'style="max-height: 100%; max-width: 100%">')
         except ValueError as e:
             message, minimum, maximum = e.args
             if page < minimum:
@@ -462,7 +466,8 @@ async def random_illust_image(min_view: int = 10000,
                               min_bookmarks: int = 1000,
                               tag: List[str] = Query(['ロリ']),
                               allow_r18: bool = False,
-                              allow_r18g: bool = False):
+                              allow_r18g: bool = False,
+                              preview: bool = True):
     async with Pixiv() as p:
         choice = await p.random_illust(
             min_view=min_view,
@@ -473,9 +478,10 @@ async def random_illust_image(min_view: int = 10000,
             limit=1,
         )
     if choice is not None:
-        return HTMLResponse('<title>Random Image</title>'
-                            f'<img src="{choice.image(random=True)}" '
-                            'style="max-height: 100%; max-width: 100%">')
+        return HTMLResponse(
+            '<title>Random Image</title>'
+            f'<img src="{choice.image(preview=preview, random=True)}" '
+            'style="max-height: 100%; max-width: 100%">')
     else:
         return HTMLResponse('Cannot get random image! Check parameters.')
 
