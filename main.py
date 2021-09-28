@@ -4,11 +4,14 @@ Ethpch's personal API backend.
 from argparse import ArgumentParser
 from functools import partial
 from importlib import import_module
+from constants import __version__
 
 
-def runserver():
-    from utils.config import asgi_framework
-    module = import_module(f'utils.server.{asgi_framework}')
+def runserver(debug: bool = False, **kwargs):
+    from utils import config
+    if debug is True:
+        setattr(config, 'debug', True)
+    module = import_module(f'utils.server.{config.asgi_framework}')
     module.run()
 
 
@@ -30,14 +33,24 @@ def alembic(mode: int, *args):
 
 
 def main():
-    parser = ArgumentParser(prog='api.ethpch',
-                            description='api.ethpch launcher')
+    parser = ArgumentParser(
+        prog='api.ethpch',
+        description='api.ethpch launcher',
+    )
+    parser.add_argument(
+        '-v',
+        '--version',
+        action='version',
+        help='show api version and exit',
+        version='%(prog)s ' + __version__,
+    )
     subparsers = parser.add_subparsers(dest='command')
     subparsers.add_parser('alembic', add_help=False)
     subparsers.add_parser('init')
     subparsers.add_parser('makemigrations')
     subparsers.add_parser('migrate')
-    subparsers.add_parser('runserver')
+    rs_u = subparsers.add_parser('runserver')
+    rs_u.add_argument('--debug', action='store_true', dest='debug')
     sp_u = subparsers.add_parser('update')
     sp_u.add_argument('-f', '--force', action='store_true', dest='force')
     args, other_args = parser.parse_known_args()
@@ -50,7 +63,7 @@ def main():
         'init': partial(alembic, 1),
         'makemigrations': partial(alembic, 2),
         'migrate': partial(alembic, 3),
-        'runserver': runserver,
+        'runserver': partial(runserver, **vars(args)),
         'update': partial(update, **vars(args))
     }
     try:
