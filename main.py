@@ -1,18 +1,18 @@
 """ api.ethpch
 Ethpch's personal API backend.
 """
+import sys
 from argparse import ArgumentParser
 from functools import partial
-from importlib import import_module
 from constants import __version__
 
 
-def runserver(debug: bool = False, **kwargs):
+def runserver(debug: bool = False, allow_reload: bool = False, **kwargs):
     from utils import config
     if debug is True:
         setattr(config, 'debug', True)
-    module = import_module(f'utils.server.{config.asgi_framework}')
-    module.run()
+    from utils.server import run
+    run(allow_reload=allow_reload)
 
 
 def update(force: bool = False, **kwargs):
@@ -32,7 +32,7 @@ def alembic(mode: int, *args):
         alembic.alembic_migrate()
 
 
-def main():
+def main(argv: list = []):
     parser = ArgumentParser(
         prog='api.ethpch',
         description='api.ethpch launcher',
@@ -51,9 +51,12 @@ def main():
     subparsers.add_parser('migrate')
     rs_u = subparsers.add_parser('runserver')
     rs_u.add_argument('--debug', action='store_true', dest='debug')
+    rs_u.add_argument('--allow_reload',
+                      action='store_true',
+                      dest='allow_reload')
     sp_u = subparsers.add_parser('update')
     sp_u.add_argument('-f', '--force', action='store_true', dest='force')
-    args, other_args = parser.parse_known_args()
+    args, other_args = parser.parse_known_args(argv or sys.argv[1:])
     from utils.log import setup_main_logger, init_logging, add_stdout
     setup_main_logger()
     init_logging()

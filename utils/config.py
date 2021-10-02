@@ -131,6 +131,8 @@ CONFIG_TEMPLATE = """server:
 # ASGI Framework, options: uvicorn
 asgi framework: uvicorn
 
+allow reload: false
+
 # markdown theme, options:
 # amelia, cerulean, cyborg, journal, readable, simplex,
 # slate, spacelab, spruce, superhero, united
@@ -200,6 +202,7 @@ else:
         debug = False
     server = serverModel(**RAW_CONFIG['server'])
     asgi_framework: str = RAW_CONFIG.get('asgi framework', 'uvicorn')
+    allow_reload: bool = RAW_CONFIG.get('allow reload', False)
     markdown_theme: str = RAW_CONFIG.get('markdown theme', 'united')
     s3 = s3Model(**RAW_CONFIG['s3'])
     database = databaseModel(**RAW_CONFIG['database'])

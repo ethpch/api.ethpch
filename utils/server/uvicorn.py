@@ -1,9 +1,14 @@
 import os
 import sys
+import signal
 import logging
+import multiprocessing
+from threading import Thread
+from typing import Union
 from uvicorn.server import Server
 from uvicorn.config import Config
 from uvicorn.supervisors import ChangeReload, Multiprocess
+from uvicorn.middleware.debug import DebugMiddleware
 from constants import ASGI
 from utils import log
 from utils.config import server as _server, debug as _debug
@@ -24,24 +29,37 @@ class Config(Config):
     def setup_event_loop(self):
         auto_event_loop_policy()
 
+    def load(self):
+        super().load()
+        # access config to FastAPI
+        app = self.loaded_app.app
+        if isinstance(app, DebugMiddleware):
+            app.app._config = self
+        else:
+            app._config = self
+
 
 class Server(Server):
     async def startup(self, sockets):
-        from utils.schedule.apscheduler import scheduler, import_scheduled_job
-        import_scheduled_job()
-        self._scheduler = scheduler
-        self._scheduler.start()
-        await super().startup(sockets=sockets)
+        self._sockets = sockets
+        if multiprocessing.parent_process() is None:
+            from utils.schedule.apscheduler import (
+                scheduler,
+                import_scheduled_job,
+            )
+            import_scheduled_job()
+            self._scheduler = scheduler
+            self._scheduler.start()
+        await super().startup(sockets=self._sockets)
 
     def handle_exit(self, sig, frame):
-        if self._scheduler.running:
+        if hasattr(self, '_scheduler') and self._scheduler.running:
             self._scheduler.shutdown()
         super().handle_exit(sig, frame)
 
 
 class ChangeReload(ChangeReload):
     def startup(self):
-        import signal
         from uvicorn.supervisors.basereload import (
             logger,
             HANDLED_SIGNALS,
@@ -77,6 +95,9 @@ class ChangeReload(ChangeReload):
         super().restart()
         log.add_stdout()
 
+    def reload(self):
+        self.restart()
+
     def signal_handler(self, sig, frame):
         if self._scheduler.running:
             self._scheduler.shutdown()
@@ -85,7 +106,6 @@ class ChangeReload(ChangeReload):
 
 class Multiprocess(Multiprocess):
     def startup(self):
-        import signal
         from uvicorn.supervisors.multiprocess import (
             logger,
             HANDLED_SIGNALS,
@@ -115,10 +135,31 @@ class Multiprocess(Multiprocess):
         self._scheduler = scheduler
         self._scheduler.start()
 
+    def reload(self):
+        from uvicorn.supervisors.multiprocess import logger, get_subprocess
+        logger.info('Start server process reloading.')
+        for process in self.processes:
+            process.terminate()
+            process.join()
+            logger.info(f'Stopping server process {process.pid}.')
+        self.processes = []
+        log.remove_sinks('stdout')  # avoid pickle error
+        for idx in range(self.config.workers):
+            process = get_subprocess(config=self.config,
+                                     target=self.target,
+                                     sockets=self.sockets)
+            process.start()
+            self.processes.append(process)
+        log.add_stdout()
+        logger.info('Reload server process completed.')
+
     def signal_handler(self, sig, frame):
         if self._scheduler.running:
             self._scheduler.shutdown()
         super().signal_handler(sig, frame)
+
+
+ProcessManager: Union[ChangeReload, Multiprocess, Server, None] = None
 
 
 def run():
@@ -143,16 +184,55 @@ def run():
             "'reload' or 'workers'.")
         sys.exit(1)
 
+    from utils.server import _reload
+    config._allow_reload = _reload
+    global ProcessManager
     if config.should_reload:
         sock = config.bind_socket()
-        ChangeReload(config, target=server.run, sockets=[sock]).run()
+        ProcessManager = ChangeReload(
+            config,
+            target=server.run,
+            sockets=[sock],
+        )
     elif config.workers > 1:
         sock = config.bind_socket()
-        Multiprocess(config, target=server.run, sockets=[sock]).run()
+        ProcessManager = Multiprocess(
+            config,
+            target=server.run,
+            sockets=[sock],
+        )
     else:
-        server.run()
+        if _reload is True:
+            sock = config.bind_socket()
+            Reload = type('Reload', (ChangeReload, ),
+                          {'should_restart': lambda self: False})
+            ProcessManager = Reload(
+                config,
+                target=server.run,
+                sockets=[sock],
+            )
+        else:
+            ProcessManager = server
+    if _reload is True:
+        ProcessManager.config._reload_event = event = multiprocessing.Event()
+
+        def reload_listener(event: multiprocessing.Event):
+            while event.wait():
+                reload()
+                event.clear()
+
+        Thread(target=reload_listener, args=(event, ), daemon=True).start()
+    ProcessManager.run()
     if config.uds:
         os.remove(config.uds)
 
 
-__all__ = ('Config', 'ChangeReload', 'Multiprocess', 'run')
+def reload():
+    if isinstance(ProcessManager, (ChangeReload, Multiprocess)):
+        ProcessManager.reload()
+    else:
+        logging.getLogger('api_ethpch').warning('ProcessManager is unbound.')
+
+
+__all__ = ('Config', 'ChangeReload', 'Multiprocess', 'run', 'reload',
+           'ProcessManager')

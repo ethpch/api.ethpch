@@ -1,7 +1,7 @@
 from pathlib import Path, PosixPath
 import platform
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 ROOT_DIR = Path('.').resolve()
 VENV_DIR = ROOT_DIR / 'venv'

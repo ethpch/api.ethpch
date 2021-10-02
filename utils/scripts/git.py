@@ -8,7 +8,10 @@ def pull(branch: str = 'master',
     git_dir = rf'--git-dir={ROOT_DIR / ".git"}'
     if force is True:
         commands = [
-            ['git', git_dir, 'fetch', '-u', source, f'+{branch}:{branch}'],
+            [
+                'git', git_dir, 'fetch', '--prune', '--update-head-ok', source,
+                f'+{branch}:{branch}'
+            ],
             ['git', git_dir, 'checkout', branch],
             ['git', git_dir, 'reset', '--hard', f'origin/{branch}'],
         ]
