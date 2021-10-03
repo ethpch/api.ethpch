@@ -25,6 +25,10 @@ def run(allow_reload: bool = False):
         logger.error(
             f'Server {asgi_framework} doesn\'t implement "run" method!')
     else:
+        from utils import log
+        log.setup_main_logger()
+        log.init_logging()
+        log.add_stdout()
         if _reload:
             logger.info('Running server with "reload" feature.')
         run_function()

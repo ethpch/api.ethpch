@@ -18,7 +18,5 @@ LOG_CONFIG_PATH = UTILS_DIR / 'log' / 'log_config.yaml'
 
 ALEMBIC_MIGRATION_PATH = UTILS_DIR / 'database' / 'migrations'
 
-GIT_SOURCE = 'https://github.com/ethpch/api.ethpch.git'
-
 if platform.system() == 'Linux':
     SYSTEMD_DIR = PosixPath('/etc/systemd/system/')

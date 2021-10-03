@@ -132,13 +132,12 @@ class ConcurrencyScheduler(object):
         except asyncio.TimeoutError:
             logger.warning(f'Task {id} runs timeout.')
         except Exception as e:
-            logger.error(
-                f'Task {id} raises unexpected exception: '
-                f'error type: {type(e)}, '
-                f'error message: {e}. ')
+            logger.error(f'Task {id} raises unexpected exception: '
+                         f'error type: {type(e)}, '
+                         f'error message: {e}. ')
         self._tasks.pop(id, None)
         logger.debug(f'Concurrency Scheduler "{self.name}" '
-                     f'completes task {id}.')
+                     f'accomplishes task {id}.')
 
 
 __all__ = ('ConcurrencyScheduler', )

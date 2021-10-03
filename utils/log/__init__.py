@@ -108,10 +108,11 @@ def init_logging():
 
 def add_stdout():
     # add sys.stdout
-    _sinks_mapping['stdout'] = get_logger().add(
-        sink=sys.stdout,
-        format=DEFAULT_FORMAT,
-    )
+    if 'stdout' not in _sinks_mapping.keys():
+        _sinks_mapping['stdout'] = get_logger().add(
+            sink=sys.stdout,
+            format=DEFAULT_FORMAT,
+        )
 
 
 def remove_sinks(*keys: str):

@@ -9,20 +9,23 @@ if platform.system() == 'Linux':
     from . import run_subprocess
 
     def create_systemd_unit(venv: Path = VENV_DIR,
-                            force_install: bool = False):
+                            force_install: bool = False,
+                            service_name: str = None):
         exec_cmd = f'{venv / "bin/python"} {ROOT_DIR / "main.py"} runserver'
-        template = ('[Unit]'
-                    f'Description={asgi_framework}'
-                    '[Service]'
-                    'TimeoutSec=3'
-                    f'WorkingDirectory={ROOT_DIR}'
-                    f'ExecStart={exec_cmd}'
-                    'Restart=on-failure'
-                    f'ExecReload={exec_cmd}'
-                    'RestartSec=3'
-                    '[Install]'
+        template = ('[Unit]\n'
+                    f'Description={asgi_framework}\n'
+                    '[Service]\n'
+                    'TimeoutSec=3\n'
+                    f'WorkingDirectory={ROOT_DIR}\n'
+                    f'ExecStart={exec_cmd}\n'
+                    'Restart=on-failure\n'
+                    f'ExecReload={exec_cmd}\n'
+                    'RestartSec=3\n'
+                    '[Install]\n'
                     'WantedBy=multi-user.target')
-        unit = SYSTEMD_DIR / f'{asgi_framework}.service'
+        if not service_name:
+            service_name = asgi_framework
+        unit = SYSTEMD_DIR / f'{service_name}.service'
         if unit.exists() is False or force_install is True:
             unit.write_text(template, encoding='utf-8')
             run_subprocess(['systemctl', 'daemon-reload'])

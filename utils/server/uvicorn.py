@@ -151,7 +151,7 @@ class Multiprocess(Multiprocess):
             process.start()
             self.processes.append(process)
         log.add_stdout()
-        logger.info('Reload server process completed.')
+        logger.info('Reload server process accomplished.')
 
     def signal_handler(self, sig, frame):
         if self._scheduler.running:
@@ -163,7 +163,6 @@ ProcessManager: Union[ChangeReload, Multiprocess, Server, None] = None
 
 
 def run():
-    log.setup_main_logger()
     app = ':'.join(ASGI)
     kwargs = dict(
         host=_server.host,

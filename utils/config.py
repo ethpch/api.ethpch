@@ -62,6 +62,30 @@ class s3Model(BaseModel):
         super().__init__(**data)
 
 
+_database_default_mapping = {
+    'sqlite': {
+        'driver': 'aiosqlite',
+        'port': None,
+    },
+    'pgsql': {
+        'driver': 'asyncpg',
+        'port': 5432
+    },
+    'mysql': {
+        'driver': 'asyncmy',
+        'port': 3306
+    },
+    'oracle': {
+        'driver': None,
+        'port': 1521
+    },
+    'mssql': {
+        'driver': None,
+        'port': 1433
+    },
+}
+
+
 class databaseModel(BaseModel):
     type: Literal['sqlite', 'pgsql', 'mysql', 'oracle', 'mssql'] = 'sqlite'
     driver: str
@@ -73,39 +97,18 @@ class databaseModel(BaseModel):
     dsn: List[str] = []
 
     def __init__(__pydantic_self__, **data: Any) -> None:
-        if data['type'] == 'sqlite':
-            if data.get('driver') is None:
-                data['driver'] = 'aiosqlite'
-        elif data['type'] == 'pgsql':
-            if data.get('port') is None:
-                data['port'] = 5432
-            if data.get('driver') is None:
-                data['driver'] = 'asyncpg'
-        elif data['type'] == 'mysql':
-            if data.get('port') is None:
-                data['port'] = 3306
-            if data.get('driver') is None:
-                data['driver'] = 'aiomysql'
-        elif data['type'] == 'oracle':
-            if data.get('port') is None:
-                data['port'] = 1521
-            if data.get('driver') is None:
-                pass
-        elif data['type'] == 'mssql':
-            if data.get('port') is None:
-                data['port'] = 1433
-            if data.get('driver') is None:
-                pass
-        if data.get('host') is None:
-            data['host'] = '127.0.0.1'
-        if data.get('user') is None:
-            data['user'] = 'user'
-        if data.get('password') is None:
-            data['password'] = 'password'
-        if data.get('schema') is None:
-            data['schema'] = 'api.ethpch'
-        if data.get('dsn') is None:
-            data['dsn'] = []
+        try:
+            data['driver'] = data.get('driver') or \
+                _database_default_mapping[data['type']]['driver']
+            data['port'] = data.get('port') or \
+                _database_default_mapping[data['type']]['port']
+        except KeyError:  # database type is invalid
+            super().__init__(**data)  # raise pydantic error
+        data['host'] = data.get('host') or '127.0.0.1'
+        data['user'] = data.get('user') or 'user'
+        data['password'] = data.get('password') or 'password'
+        data['schema'] = data.get('schema') or 'api.ethpch'
+        data['dsn'] = data.get('dsn') or []
         super().__init__(**data)
 
 

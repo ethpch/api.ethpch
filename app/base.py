@@ -1,13 +1,12 @@
 from importlib import import_module
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, File, UploadFile
 from fastapi import responses
 from fastapi.background import BackgroundTasks
-from starlette.requests import Request
 from utils.config import debug
 from utils.database.session import Session
 from utils.schedule import ConcurrencyScheduler
 from utils.general import markdown_html
-from constants import __version__, README, TODO
+from constants import ROOT_DIR, __version__, README, TODO
 
 response_class_choices = {
     'orjson': responses.ORJSONResponse,
@@ -57,6 +56,21 @@ async def todo():
     return responses.HTMLResponse(markdown_html(todo))
 
 
+@APP.post('/todo', include_in_schema=False)
+async def todo_update(md: UploadFile = File(...), req: Request = ...):
+    if md.filename.endswith('.md'):
+        try:
+            import aiofiles
+            async with aiofiles.open(ROOT_DIR / 'TODO.md',
+                                     mode='w',
+                                     encoding='utf-8') as f:
+                await f.write((await md.read()).decode('utf-8'))
+        except ModuleNotFoundError:
+            with open(ROOT_DIR / 'TODO.md', mode='w', encoding='utf-8') as f:
+                f.write((await md.read()).decode('utf-8'))
+    return responses.RedirectResponse(req.url_for('todo'), status_code=303)
+
+
 @APP.post('/reload', include_in_schema=False)
 async def reload(tasks: BackgroundTasks):
     if hasattr(APP, 'reload'):
@@ -69,5 +83,11 @@ async def reload(tasks: BackgroundTasks):
 @APP.post('/update', include_in_schema=False)
 async def update(req: Request):
     from utils.scripts.git import pull
+    requirements = ROOT_DIR / 'requirements.txt'
+    stat0 = requirements.stat().st_size
     pull()
-    return responses.RedirectResponse(req.url_for('/reload'))
+    stat1 = requirements.stat().st_size
+    if stat0 != stat1:
+        from utils.scripts import run_subprocess
+        run_subprocess(['pip', 'install', '-r', 'requirements.txt', '-U'])
+    return responses.RedirectResponse(req.url_for('reload'))

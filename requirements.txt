@@ -2,6 +2,7 @@ pyyaml
 loguru
 uvicorn[standard]
 fastapi
+python-multipart
 orjson
 aiobotocore
 sqlalchemy>=1.4

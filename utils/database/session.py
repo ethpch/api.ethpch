@@ -145,7 +145,7 @@ class Session(object):
                                          expire_on_commit=False,
                                          class_=AsyncSession,
                                          future=True)
-        logger.info('SQLAlchemy startup complete.')
+        logger.info('SQLAlchemy startup accomplished.')
 
     @classmethod
     async def reset(cls):
@@ -163,7 +163,7 @@ class Session(object):
     @classmethod
     async def shutdown(cls):
         await cls.reset()
-        logger.info('SQLAlchemy shutdown complete.')
+        logger.info('SQLAlchemy shutdown accomplished.')
 
     def __init__(self, *args, **kwargs):
         try:
