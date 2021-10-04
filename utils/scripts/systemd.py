@@ -42,5 +42,13 @@ if platform.system() == 'Linux':
     def stop_service():
         run_subprocess(['service', asgi_framework, 'stop'])
 
+    def restart_service():
+        run_subprocess(['service', asgi_framework, 'restart'])
+
+    def service_running() -> bool:
+        cp = run_subprocess(['service', asgi_framework, 'status'])
+        return True if 'active (running)' in cp.stdout else False
+
     __all__ = ('create_systemd_unit', 'enable_systemd_unit', 'start_service',
-               'disable_systemd_unit', 'stop_service')
+               'disable_systemd_unit', 'stop_service', 'restart_service',
+               'service_running')

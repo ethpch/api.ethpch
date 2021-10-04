@@ -73,11 +73,16 @@ async def todo_update(md: UploadFile = File(...), req: Request = ...):
 
 @APP.post('/reload', include_in_schema=False)
 async def reload(tasks: BackgroundTasks):
+    from platform import system
     if hasattr(APP, 'reload') and callable(APP.reload):
         tasks.add_task(APP.reload)
         return 'Reload success.'
-    else:
-        return 'Reload is not allowed.'
+    elif system() == 'Linux':
+        from utils.scripts import systemd
+        if systemd.service_running() is True:
+            tasks.add_task(systemd.restart_service)
+            return 'Reload success'
+    return 'Reload is not allowed.'
 
 
 @APP.post('/update', include_in_schema=False)
@@ -86,11 +91,13 @@ async def update(req: Request):
     requirements = ROOT_DIR / 'requirements.txt'
     stat0 = requirements.stat().st_size
     cps = pull()
-    if all(['rejected' not in cp.stdout for cp in cps]):
+    if any(['Already up to date.' in cp.stdout for cp in cps]):
+        return 'Already up to date. Do nothing.'
+    elif any(['rejected' in cp.stdout for cp in cps]):
+        return 'Update failed. There may be a force-pushed commit.'
+    else:
         stat1 = requirements.stat().st_size
         if stat0 != stat1:
             from utils.scripts import run_subprocess
             run_subprocess(['pip', 'install', '-r', 'requirements.txt', '-U'])
         return responses.RedirectResponse(req.url_for('reload'))
-    else:
-        return 'Update failed. There may be a force-pushed commit.'
