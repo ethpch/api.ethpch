@@ -1746,6 +1746,13 @@ class Pixiv(object):
                 )
                 count_result = await session.execute(count_stmt)
                 count = count_result.scalar()
+                stmt = select(
+                    tables.Illust,
+                    joins=[tables.Illust.tags],
+                    whereclauses=whereclauses,
+                    order_by=func.random(),
+                    limit=limit,
+                )
                 if count < limit * 10:
                     offset = 0
                     illusts = []
@@ -1773,19 +1780,16 @@ class Pixiv(object):
                             offset += len(_raw)
                         else:
                             break
+                    if count > 0:
+                        result = await session.execute(stmt)
+                        illusts.extend(result.scalars().unique().all())
+                    illusts = list(set(illusts))
                     if limit == 1:
                         return choice(illusts) if illusts else None
                     else:
                         return choices(illusts, k=limit) \
                             if len(illusts) >= limit else illusts
                 else:
-                    stmt = select(
-                        tables.Illust,
-                        joins=[tables.Illust.tags],
-                        whereclauses=whereclauses,
-                        order_by=func.random(),
-                        limit=limit,
-                    )
                     result = await session.execute(stmt)
                     illusts = result.scalars().unique().all()
                     self.downloads.extend([

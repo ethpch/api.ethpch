@@ -11,7 +11,7 @@ async def src_to_dst(source: str) -> str:
         async with session.begin():
             stmt = select(
                 Shorturl,
-                whereclauses=[Shorturl.source == source],
+                whereclauses=[Shorturl.source == str(source)],
                 limit=1,
             )
             result = await session.execute(stmt)

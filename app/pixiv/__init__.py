@@ -1,5 +1,5 @@
 from typing import List, Literal, Union, Optional
-from fastapi import APIRouter, Query, Request
+from fastapi import status, APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from .pixiv import Pixiv
 from . import models
@@ -8,7 +8,9 @@ pixiv_router = APIRouter(prefix='/pixiv')
 
 
 # user
-@pixiv_router.post('/u/{user_id}', response_model=models.User)
+@pixiv_router.post('/u/{user_id}',
+                   response_model=models.User,
+                   tags=['pixiv.user'])
 async def user_detail(user_id: int, local: bool = False):
     if local is True:
         call = Pixiv.user_detail_local
@@ -19,7 +21,9 @@ async def user_detail(user_id: int, local: bool = False):
     return user
 
 
-@pixiv_router.post('/u/{user_id}/illusts', response_model=List[models.Illust])
+@pixiv_router.post('/u/{user_id}/illusts',
+                   response_model=List[models.Illust],
+                   tags=['pixiv.user'])
 async def user_illusts(user_id: int,
                        type: Literal['illust', 'manga'] = 'illust',
                        offset: Optional[int] = None,
@@ -33,7 +37,9 @@ async def user_illusts(user_id: int,
     return illusts
 
 
-@pixiv_router.post('/u/{user_id}/novels', response_model=List[models.Novel])
+@pixiv_router.post('/u/{user_id}/novels',
+                   response_model=List[models.Novel],
+                   tags=['pixiv.user'])
 async def user_novels(user_id: int,
                       offset: Optional[int] = None,
                       local: bool = False):
@@ -47,7 +53,8 @@ async def user_novels(user_id: int,
 
 
 @pixiv_router.post('/u/{user_id}/bookmarks_illust',
-                   response_model=List[models.Illust])
+                   response_model=List[models.Illust],
+                   tags=['pixiv.user'])
 async def user_bookmarks_illust(user_id: int,
                                 offset: Optional[int] = None,
                                 local: bool = False):
@@ -60,7 +67,9 @@ async def user_bookmarks_illust(user_id: int,
     return illusts
 
 
-@pixiv_router.post('/u/{user_id}/related', response_model=List[models.User])
+@pixiv_router.post('/u/{user_id}/related',
+                   response_model=List[models.User],
+                   tags=['pixiv.user'])
 async def user_related(user_id: int, offset: Optional[int] = None):
     call = Pixiv.user_related
     async with Pixiv() as p:
@@ -70,7 +79,7 @@ async def user_related(user_id: int, offset: Optional[int] = None):
 
 @pixiv_router.post('/u/{user_id}/follow_add',
                    include_in_schema=False,
-                   status_code=204)
+                   status_code=status.HTTP_204_NO_CONTENT)
 async def user_follow_add(
         user_id: int,
         restrict: Literal['public', 'private'] = 'public') -> None:
@@ -80,7 +89,7 @@ async def user_follow_add(
 
 @pixiv_router.post('/u/{user_id}/follow_del',
                    include_in_schema=False,
-                   status_code=204)
+                   status_code=status.HTTP_204_NO_CONTENT)
 async def user_follow_del(user_id: int):
     call = Pixiv.user_follow_del
     await call(Pixiv(), user_id=user_id)
@@ -96,7 +105,9 @@ async def user_bookmark_tags_illust(restrict: Literal['public',
     return data
 
 
-@pixiv_router.post('/u/{user_id}/following', response_model=List[models.User])
+@pixiv_router.post('/u/{user_id}/following',
+                   response_model=List[models.User],
+                   tags=['pixiv.user'])
 async def user_following(user_id: int,
                          offset: Optional[int] = None,
                          local: bool = False):
@@ -120,7 +131,9 @@ async def user_follower(offset: Optional[int] = None, local: bool = False):
     return users
 
 
-@pixiv_router.post('/u/{user_id}/mypixiv', response_model=List[models.User])
+@pixiv_router.post('/u/{user_id}/mypixiv',
+                   response_model=List[models.User],
+                   tags=['pixiv.user'])
 async def user_mypixiv(user_id: int,
                        offset: Optional[int] = None,
                        local: bool = False):
@@ -145,21 +158,25 @@ async def user_list(offset: Optional[int] = None, local: bool = False):
 
 
 # illust
-@pixiv_router.get('/i/{illust_id}')
+@pixiv_router.get('/i/{illust_id}',
+                  response_class=HTMLResponse,
+                  tags=['pixiv.illust'])
 async def illust_image(illust_id: int, preview: bool = True):
     async with Pixiv() as p:
         illust = await p.illust_detail_local(illust_id=illust_id)
         if illust is None:
             illust = await p.illust_detail(illust_id=illust_id)
     if illust is not None:
-        return HTMLResponse(f'<title>{illust_id}</title>'
-                            f'<img src="{illust.image(preview=preview)}" '
-                            'style="max-height: 100%; max-width: 100%">')
+        return (f'<title>{illust_id}</title>'
+                f'<img src="{illust.image(preview=preview)}" '
+                'style="max-height: 100%; max-width: 100%">')
     else:
-        return HTMLResponse(f'Cannot find illust {illust_id}!')
+        return f'Cannot find illust {illust_id}!'
 
 
-@pixiv_router.get('/i/{illust_id}/p{page}')
+@pixiv_router.get('/i/{illust_id}/p{page}',
+                  response_class=HTMLResponse,
+                  tags=['pixiv.illust'])
 async def illust_image_page(illust_id: int,
                             page: int,
                             preview: bool = True,
@@ -170,27 +187,30 @@ async def illust_image_page(illust_id: int,
             illust = await p.illust_detail(illust_id=illust_id)
     if illust is not None:
         try:
-            return HTMLResponse(
-                f'<title>{illust_id}-p{page}</title>'
-                f'<img src="{illust.image(page=page, preview=preview)}" '
-                'style="max-height: 100%; max-width: 100%">')
+            return (f'<title>{illust_id}-p{page}</title>'
+                    f'<img src="{illust.image(page=page, preview=preview)}" '
+                    'style="max-height: 100%; max-width: 100%">')
         except ValueError as e:
             message, minimum, maximum = e.args
             if page < minimum:
                 return RedirectResponse(
                     req.url_for('illust_image_page',
                                 illust_id=illust_id,
-                                page=minimum))
+                                page=minimum),
+                    status_code=status.HTTP_308_PERMANENT_REDIRECT)
             elif page > maximum:
                 return RedirectResponse(
                     req.url_for('illust_image_page',
                                 illust_id=illust_id,
-                                page=maximum))
+                                page=maximum),
+                    status_code=status.HTTP_308_PERMANENT_REDIRECT)
     else:
-        return HTMLResponse(f'Cannot find illust {illust_id}!')
+        return f'Cannot find illust {illust_id}!'
 
 
-@pixiv_router.post('/i/{illust_id}', response_model=models.Illust)
+@pixiv_router.post('/i/{illust_id}',
+                   response_model=models.Illust,
+                   tags=['pixiv.illust'])
 async def illust_detail(illust_id: int, local: bool = False):
     if local is True:
         call = Pixiv.illust_detail_local
@@ -215,7 +235,8 @@ async def illust_follow(restrict: Literal['public', 'private'] = 'public',
 
 
 @pixiv_router.post('/i/{illust_id}/comments',
-                   response_model=List[models.IllustComment])
+                   response_model=List[models.IllustComment],
+                   tags=['pixiv.illust'])
 async def illust_comments(illust_id: int,
                           offset: Optional[int] = None,
                           local: bool = False):
@@ -229,7 +250,8 @@ async def illust_comments(illust_id: int,
 
 
 @pixiv_router.post('/i/{illust_id}/related',
-                   response_model=List[models.Illust])
+                   response_model=List[models.Illust],
+                   tags=['pixiv.illust'])
 async def illust_related(illust_id: int, offset: Optional[int] = None):
     call = Pixiv.illust_related
     async with Pixiv() as p:
@@ -237,7 +259,9 @@ async def illust_related(illust_id: int, offset: Optional[int] = None):
     return illusts
 
 
-@pixiv_router.post('/illust_recommended', response_model=List[models.Illust])
+@pixiv_router.post('/illust_recommended',
+                   response_model=List[models.Illust],
+                   tags=['pixiv.illust'])
 async def illust_recommended(content_type: Literal['illust',
                                                    'manga'] = 'illust',
                              offset: Optional[int] = None):
@@ -247,7 +271,9 @@ async def illust_recommended(content_type: Literal['illust',
     return illusts
 
 
-@pixiv_router.post('/illust_ranking', response_model=List[models.Illust])
+@pixiv_router.post('/illust_ranking',
+                   response_model=List[models.Illust],
+                   tags=['pixiv.illust'])
 async def illust_ranking(
         mode: Literal['day', 'week', 'month', 'day_male', 'day_female',
                       'week_original', 'week_rookie', 'day_manga', 'day_r18',
@@ -266,7 +292,8 @@ async def illust_ranking(
 
 
 @pixiv_router.post('/trending_tags_illust',
-                   response_model=List[models.TrendingTagsIllust])
+                   response_model=List[models.TrendingTagsIllust],
+                   tags=['pixiv.illust'])
 async def trending_tags_illust():
     call = Pixiv.trending_tags_illust
     async with Pixiv() as p:
@@ -284,7 +311,7 @@ async def illust_bookmark_detail(illust_id: int):
 
 @pixiv_router.post('/i/{illust_id}/bookmark_add',
                    include_in_schema=False,
-                   status_code=204)
+                   status_code=status.HTTP_204_NO_CONTENT)
 async def illust_bookmark_add(illust_id: int,
                               restrict: Literal['public',
                                                 'private'] = 'public'):
@@ -295,7 +322,7 @@ async def illust_bookmark_add(illust_id: int,
 
 @pixiv_router.post('/i/{illust_id}/bookmark_del',
                    include_in_schema=False,
-                   status_code=204)
+                   status_code=status.HTTP_204_NO_CONTENT)
 async def illust_bookmark_del(illust_id: int):
     call = Pixiv.illust_bookmark_delete
     async with Pixiv() as p:
@@ -303,7 +330,8 @@ async def illust_bookmark_del(illust_id: int):
 
 
 @pixiv_router.post('/i/{illust_id}/ugoira_metadata',
-                   response_model=models.UgoiraMetadata)
+                   response_model=models.UgoiraMetadata,
+                   tags=['pixiv.illust'])
 async def ugoira_metadata(illust_id: int):
     call = Pixiv.ugoira_metadata
     async with Pixiv() as p:
@@ -312,24 +340,27 @@ async def ugoira_metadata(illust_id: int):
 
 
 # novel
-@pixiv_router.get('/n/{novel_id}')
+@pixiv_router.get('/n/{novel_id}',
+                  response_class=HTMLResponse,
+                  tags=['pixiv.novel'])
 async def novel_article(novel_id: int):
     async with Pixiv() as p:
         novel = await p.novel_detail_local(novel_id=novel_id)
         if novel is None:
             novel = await p.novel_detail(novel_id=novel_id)
     if novel is not None:
-        return HTMLResponse(f'<title>{novel.id}</title>'
-                            f'<img src="{novel.large}" '
-                            'style="max-height: 100%; max-width: 100%">'
-                            '<article><p>' +
-                            '</p><p>'.join(novel.content.split('\n')) +
-                            '</p></article>')
+        return (f'<title>{novel.id}</title>'
+                f'<img src="{novel.large}" '
+                'style="max-height: 100%; max-width: 100%">'
+                '<article><p>' + '</p><p>'.join(novel.content.split('\n')) +
+                '</p></article>')
     else:
-        return HTMLResponse(f'Cannot find novel {novel_id}!')
+        return f'Cannot find novel {novel_id}!'
 
 
-@pixiv_router.post('/n/{novel_id}', response_model=models.Novel)
+@pixiv_router.post('/n/{novel_id}',
+                   response_model=models.Novel,
+                   tags=['pixiv.novel'])
 async def novel_detail(novel_id: int, local: bool = False):
     if local is True:
         call = Pixiv.novel_detail_local
@@ -340,7 +371,9 @@ async def novel_detail(novel_id: int, local: bool = False):
     return novel
 
 
-@pixiv_router.post('/n/{novel_id}/text', response_model=models.NovelText)
+@pixiv_router.post('/n/{novel_id}/text',
+                   response_model=models.NovelText,
+                   tags=['pixiv.novel'])
 async def novel_text(novel_id: int, local: bool = False):
     if local is True:
         call = Pixiv.novel_text_local
@@ -351,7 +384,9 @@ async def novel_text(novel_id: int, local: bool = False):
     return text
 
 
-@pixiv_router.post('/n/series/{series_id}', response_model=List[models.Novel])
+@pixiv_router.post('/n/series/{series_id}',
+                   response_model=List[models.Novel],
+                   tags=['pixiv.novel'])
 async def novel_series(series_id: int, local: bool = False):
     if local is True:
         call = Pixiv.novel_series_local
@@ -363,7 +398,9 @@ async def novel_series(series_id: int, local: bool = False):
 
 
 # showcase
-@pixiv_router.post('/sc/{showcase_id}', response_model=models.Showcase)
+@pixiv_router.post('/sc/{showcase_id}',
+                   response_model=models.Showcase,
+                   tags=['pixiv.showcase'])
 async def showcase_article(showcase_id: int, local: bool = False):
     if local is True:
         call = Pixiv.showcase_article_local
@@ -375,7 +412,9 @@ async def showcase_article(showcase_id: int, local: bool = False):
 
 
 # search
-@pixiv_router.post('/s/u', response_model=List[models.User])
+@pixiv_router.post('/s/u',
+                   response_model=List[models.User],
+                   tags=['pixiv.user'])
 async def search_user(word: List[str] = Query(...),
                       sort: Literal['date_desc', 'date_asc'] = 'date_desc',
                       duration: Optional[Literal['within_last_day',
@@ -398,7 +437,9 @@ async def search_user(word: List[str] = Query(...),
     return users
 
 
-@pixiv_router.post('/s/i', response_model=List[models.Illust])
+@pixiv_router.post('/s/i',
+                   response_model=List[models.Illust],
+                   tags=['pixiv.illust'])
 async def search_illust(
         word: List[str] = Query(...),
         search_target: Literal['partial_match_for_tags',
@@ -433,7 +474,9 @@ async def search_illust(
     return illusts
 
 
-@pixiv_router.post('/s/n', response_model=List[models.Novel])
+@pixiv_router.post('/s/n',
+                   response_model=List[models.Novel],
+                   tags=['pixiv.novel'])
 async def search_novel(
         word: List[str] = Query(...),
         search_target: Literal['partial_match_for_tags',
@@ -461,7 +504,7 @@ async def search_novel(
     return novels
 
 
-@pixiv_router.get('/r/i')
+@pixiv_router.get('/r/i', response_class=HTMLResponse, tags=['pixiv.random'])
 async def random_illust_image(min_view: int = 10000,
                               min_bookmarks: int = 1000,
                               tag: List[str] = Query(['ロリ']),
@@ -478,16 +521,16 @@ async def random_illust_image(min_view: int = 10000,
             limit=1,
         )
     if choice is not None:
-        return HTMLResponse(
-            '<title>Random Image</title>'
-            f'<img src="{choice.image(preview=preview, random=True)}" '
-            'style="max-height: 100%; max-width: 100%">')
+        return ('<title>Random Image</title>'
+                f'<img src="{choice.image(preview=preview, random=True)}" '
+                'style="max-height: 100%; max-width: 100%">')
     else:
-        return HTMLResponse('Cannot get random image! Check parameters.')
+        return 'Cannot get random image! Check parameters.'
 
 
 @pixiv_router.post('/r/i',
-                   response_model=Union[models.Illust, List[models.Illust]])
+                   response_model=Union[models.Illust, List[models.Illust]],
+                   tags=['pixiv.random'])
 async def random_illust(min_view: int = 10000,
                         min_bookmarks: int = 1000,
                         tag: List[str] = Query(['ロリ']),

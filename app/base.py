@@ -1,6 +1,6 @@
 from importlib import import_module
 from fastapi import FastAPI, Request, File, UploadFile
-from fastapi import responses
+from fastapi import responses, status
 from fastapi.background import BackgroundTasks
 from utils.config import debug
 from utils.database.session import Session
@@ -41,19 +41,18 @@ APP = FastAPI(
     default_response_class=response_class)
 
 
-@APP.get('/')
+@APP.get('/', response_class=responses.HTMLResponse)
 async def hello():
-    return responses.HTMLResponse(
-        markdown_html(README.read_text(encoding='utf-8')))
+    return markdown_html(README.read_text(encoding='utf-8'))
 
 
-@APP.get('/todo')
+@APP.get('/todo', response_class=responses.HTMLResponse)
 async def todo():
     try:
         todo = TODO.read_text(encoding='utf-8')
     except FileNotFoundError:
         todo = 'Nothing new in plan.'
-    return responses.HTMLResponse(markdown_html(todo))
+    return markdown_html(todo)
 
 
 @APP.post('/todo', include_in_schema=False)
@@ -68,16 +67,17 @@ async def todo_update(md: UploadFile = File(...), req: Request = ...):
         except ModuleNotFoundError:
             with open(ROOT_DIR / 'TODO.md', mode='w', encoding='utf-8') as f:
                 f.write((await md.read()).decode('utf-8'))
-    return responses.RedirectResponse(req.url_for('todo'), status_code=303)
+    return responses.RedirectResponse(req.url_for('todo'),
+                                      status_code=status.HTTP_303_SEE_OTHER)
 
 
 @APP.post('/reload', include_in_schema=False)
 async def reload(tasks: BackgroundTasks):
-    if hasattr(APP, 'reload'):
-        if callable(APP.reload):
-            tasks.add_task(APP.reload)
-            return 'Reload success.'
-    return 'Reload is not allowed.'
+    if hasattr(APP, 'reload') and callable(APP.reload):
+        tasks.add_task(APP.reload)
+        return 'Reload success.'
+    else:
+        return 'Reload is not allowed.'
 
 
 @APP.post('/update', include_in_schema=False)
@@ -85,9 +85,12 @@ async def update(req: Request):
     from utils.scripts.git import pull
     requirements = ROOT_DIR / 'requirements.txt'
     stat0 = requirements.stat().st_size
-    pull()
-    stat1 = requirements.stat().st_size
-    if stat0 != stat1:
-        from utils.scripts import run_subprocess
-        run_subprocess(['pip', 'install', '-r', 'requirements.txt', '-U'])
-    return responses.RedirectResponse(req.url_for('reload'))
+    cps = pull()
+    if all(['rejected' not in cp.stdout for cp in cps]):
+        stat1 = requirements.stat().st_size
+        if stat0 != stat1:
+            from utils.scripts import run_subprocess
+            run_subprocess(['pip', 'install', '-r', 'requirements.txt', '-U'])
+        return responses.RedirectResponse(req.url_for('reload'))
+    else:
+        return 'Update failed. There may be a force-pushed commit.'
